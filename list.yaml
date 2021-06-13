@@ -1,0 +1,242 @@
+apiVersion: v1
+kind: List
+items:
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: macos-service
+    namespace: nginx-ingress
+  spec:
+    selector:
+      app: nginx-ingress
+    ports:
+      - port: 80
+        name: http
+        targetPort: 80
+      
+    type: LoadBalancer
+
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: "apple"
+
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: "fruit"
+
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: "orange"
+
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: "pear"
+
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    labels:
+      app: apple
+    name: apple
+    namespace: apple
+  spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: apple
+    template:
+      metadata:
+        labels:
+          app: apple
+      spec:
+        containers:
+        - image: nicgrobler/echotest:1.0.0
+          ports:
+          - containerPort: 8080
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: "UPATH"
+            value: "redder-apple"
+          name: apple
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    labels:
+      app: orange
+    name: orange
+    namespace: orange
+  spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: orange
+    template:
+      metadata:
+        labels:
+          app: orange
+      spec:
+        containers:
+        - image: nicgrobler/echotest:1.0.0
+          ports:
+          - containerPort: 8080
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: "UPATH"
+            value: "orange-orange"
+          name: orange
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    labels:
+      app: pear
+    name: pear
+    namespace: pear
+  spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: pear
+    template:
+      metadata:
+        labels:
+          app: pear
+      spec:
+        containers:
+        - image: nicgrobler/echotest:1.0.0
+          ports:
+          - containerPort: 8080
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: "UPATH"
+            value: "green-pear"
+          name: pear
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: apple-service
+    namespace: apple
+  spec:
+    ports:
+    - port: 8000
+      targetPort: 8080
+      protocol: TCP
+      name: http
+    selector:
+      app: apple
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: orange-service
+    namespace: orange
+  spec:
+    ports:
+    - port: 8000
+      targetPort: 8080
+      protocol: TCP
+      name: http
+    selector:
+      app: orange
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: pear-service
+    namespace: pear
+  spec:
+    ports:
+    - port: 8000
+      targetPort: 8080
+      protocol: TCP
+      name: http
+    selector:
+      app: pear
+
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    name: apple-ingress-minion
+    namespace: apple
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.org/mergeable-ingress-type: "minion"
+      nginx.org/rewrites: "serviceName=apple-service rewrite=/metric/status"
+      
+  spec:
+    rules:
+    - host: fruit.example.com
+      http:
+        paths:
+        - path: /apple
+          pathType: Prefix
+          backend:
+            service:
+              name: apple-service
+              port:
+                number: 8000
+
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    name: orange-ingress-minion
+    namespace: orange
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.org/mergeable-ingress-type: "minion"
+      nginx.org/rewrites: "serviceName=orange-service rewrite=/metric/status"
+      
+  spec:
+    rules:
+    - host: fruit.example.com
+      http:
+        paths:
+        - path: /orange
+          pathType: Prefix
+          backend:
+            service:
+              name: orange-service
+              port:
+                number: 8000
+
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    name: pear-ingress-minion
+    namespace: pear
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.org/mergeable-ingress-type: "minion"
+      nginx.org/rewrites: "serviceName=pear-service rewrite=/metric/status"
+      
+  spec:
+    rules:
+    - host: fruit.example.com
+      http:
+        paths:
+        - path: /pear
+          pathType: Prefix
+          backend:
+            service:
+              name: pear-service
+              port:
+                number: 8000
+
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    name: fruit-ingress-master
+    namespace: fruit
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+      nginx.org/mergeable-ingress-type: "master"
+    labels:
+      app: ingress-master
+  spec:
+    rules:
+    - host: fruit.example.com
